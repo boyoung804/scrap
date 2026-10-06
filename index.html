@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>오늘의 주요기사 자동분류 (Gemini 무료 키)</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{--bg:#eef0f3;--card:#fff;--tx:#111;--mute:#666;--navy:#1f3864;--line:#d7dae0;--soft:#eef1f6;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171c;--card:#1d2127;--tx:#e8eaed;--mute:#9aa0a6;--navy:#8ab4f8;--line:#333a44;--soft:#2a303a}}
+:root[data-theme="dark"]{--bg:#14171c;--card:#1d2127;--tx:#e8eaed;--mute:#9aa0a6;--navy:#8ab4f8;--line:#333a44;--soft:#2a303a}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.55 "Malgun Gothic","Noto Sans KR","Apple SD Gothic Neo",sans-serif}
+header{background:#1f3864;color:#fff;padding:16px 18px}header h1{margin:0;font-size:18px}header p{margin:4px 0 0;font-size:12px;opacity:.85}
+.wrap{max-width:860px;margin:14px auto 60px;padding:0 12px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:12px}
+h2{margin:0 0 10px;font-size:15px;color:var(--navy)}
+input[type=text],select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font:inherit;background:var(--card);color:var(--tx)}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1;min-width:150px}
+label{display:block;font-size:12px;font-weight:700;margin:0 0 3px}
+details{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--navy)}
+.sr{display:flex;gap:6px;margin-top:6px}
+button{cursor:pointer;border:0;border-radius:6px;padding:8px 14px;font:700 13px inherit;font-family:inherit}
+.p{background:#1f3864;color:#fff}.g{background:var(--soft);color:var(--navy)}.sm{padding:6px 10px;font-size:12px}
+.hint{font-size:11.5px;color:var(--mute);margin-top:4px}
+.drop{border:2px dashed var(--line);border-radius:8px;padding:18px;text-align:center;color:var(--mute);cursor:pointer}
+.drop.d{border-color:var(--navy)}.drop input{display:none}
+.msg{font-size:12.5px;padding:8px 10px;border-radius:6px;margin-top:10px}.msg.err{background:#fdecea;color:#b3261e}.msg.ok{background:#eaf6ec;color:#1e6b2f}
+.bar{height:6px;background:var(--soft);border-radius:3px;margin-top:8px;overflow:hidden}.bar i{display:block;height:100%;width:0;background:#3563e9}
+.acts{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
+.page{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:20px 22px;margin-top:12px}
+.rt{margin:0 0 12px;padding:8px 0;text-align:center;font-size:21px;border-top:2px solid var(--navy);border-bottom:2px solid var(--navy)}
+.sh{display:flex;align-items:center;gap:8px;margin:14px 0 8px;font-size:17px;font-weight:700}.sh b{background:#1f3864;color:#fff;padding:0 9px;font-size:15px}.sh span{border-bottom:3px solid #888;padding-right:8px}
+.box{border:1px solid var(--tx);padding:8px 12px}
+.cat{display:inline-block;margin:10px 0 4px;padding:0 8px;border:1px dotted var(--mute);font-weight:700;font-size:13px}.cat .ck{margin-right:5px}.pm{display:none}
+.it{margin:0 0 8px}.ti{font-weight:700;font-size:14.5px}.ti span{font-weight:400;color:var(--mute)}.su{margin:1px 0 0 14px;font-size:13px;color:var(--mute)}
+.it select{width:auto;max-width:160px;margin:3px 0 0 14px;padding:2px 4px;font-size:11.5px}
+.tn{font-size:12px;font-weight:700;margin-right:4px}.modes{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;align-items:center}.modes label{display:flex;gap:4px;align-items:center;font-weight:400;font-size:13px;margin:0}.modes select{width:auto;padding:3px 6px}.crit,.excl{margin-top:8px}.excl .su{margin-left:0}.ck{margin:0 6px 0 0;vertical-align:middle;accent-color:#1f3864}.dx{background:none;color:var(--mute);padding:0 5px;margin-left:4px;font-size:16px;line-height:1;font-weight:400;opacity:.4}.dx:hover{opacity:1;color:#b3261e}#abar{position:sticky;top:0;z-index:5;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 10px;display:none;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:12.5px}#abar select{width:auto;padding:3px 6px;font-size:12.5px}#toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#333;color:#fff;padding:8px 14px;border-radius:20px;font-size:13px;display:none;z-index:9}#toast button{background:none;color:#8ab4f8;padding:0 0 0 10px}.hr{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:13px}.empty{color:var(--mute);font-size:12.5px;padding:2px 0}
+@media print{.pm{display:inline}header,.panel,.acts,.crit,.ck,.dx,#abar,#toast{display:none!important}body{background:#fff;color:#000}.page{border:0;page-break-after:always}}
+.v2{display:none}
+</style></head><body>
+<header><h1>오늘의 주요기사 자동분류</h1><p>기사 이미지를 올리면 AI가 내용을 읽고 원하는 구분으로 분류해 보고서를 만듭니다.</p></header>
+<div class="wrap">
+<div class="panel"><h2>1. 프로필</h2>
+<select id="prof" onchange="pick()"></select>
+<div class="hint" id="pinfo"></div>
+<details id="pd"><summary>프로필 추가·편집</summary>
+<div class="row" style="margin-top:8px"><div><label>프로필 이름</label><input type="text" id="pname" placeholder="예: 문체부 일일보고"></div><div><label>기관명</label><input type="text" id="org" placeholder="예: 문화체육관광부" oninput="save()"></div></div>
+<label style="margin-top:10px">구분(분류)</label><div id="secs"></div>
+<div style="margin-top:6px"><button class="g sm" onclick="addSec();save()">+ 구분 추가</button></div>
+<div class="hint">구분 이름만 적으면 AI가 기사 내용을 읽고 알맞은 구분에 넣습니다. 기사가 없는 구분도 소제목은 표시됩니다. 이름에 '오피니언'이 있으면 사설·칼럼이 그곳에 모입니다. 단, 기관 이름이 직접 나온 기사는 사설·칼럼이어도 「기관 관련 보도」에 들어갑니다.</div>
+<div class="acts" style="justify-content:flex-start"><button class="p sm" onclick="saveProf()">프로필 저장</button><button class="g sm" onclick="delProf()">삭제</button></div>
+</details></div>
+<div class="panel"><details id="kd" style="margin:0;border:0;padding:0"><summary>처음 한 번만: 무료 Gemini 키 연결 · <span id="knote"></span></summary>
+<div class="hint" style="font-size:12.5px;line-height:1.8;margin-top:8px">기사 이미지를 읽는 AI로 Google Gemini를 씁니다. Google 계정으로 <b>무료 키</b>를 한 번 만들어 붙여넣으면, 그다음부터는 zip 파일만 올리면 됩니다.<br>
+<b>1.</b> <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>에 Google 계정으로 로그인합니다.<br>
+<b>2.</b> 「API 키 만들기(Create API key)」를 누릅니다. <b>결제 수단 입력 화면이 나오면 멈추세요</b>(무료로 쓰려는 경우 필요하지 않아야 합니다).<br>
+<b>3.</b> 키 목록 줄 오른쪽의 복사 아이콘(겹친 네모)으로 키를 복사해 아래에 붙여넣고 「저장」을 누르면 맞는 키인지 바로 확인합니다.<br>
+<b>※ 이 파일은 PC에 저장한 뒤 더블클릭해서 크롬/엣지로 열어야 합니다.</b> Claude 화면 안이나 게시된 링크에서는 구글 연결이 차단됩니다.</div>
+<div class="row" style="margin-top:8px"><input type="password" id="akey" placeholder="복사한 API 키를 붙여넣기" autocomplete="off"><button class="p sm" id="kbtn" style="flex:0 0 auto;min-width:0" onclick="setKey()">저장</button></div>
+<div class="row" style="margin-top:8px"><div><label>사용할 모델 <span class="hint">(2.5 버전은 제공이 종료돼 쓸 수 없습니다. 3.x 이상을 고르세요. 막히면 자동으로 다른 모델로 바뀝니다)</span></label><select id="gm" onchange="setModel(this.value)"></select></div></div>
+<div class="hint">키는 비밀번호와 같습니다. 이 컴퓨터의 브라우저에만 저장되고 파일에는 들어 있지 않습니다. 기사 이미지는 분석을 위해 Google로 전송되며, 무료 이용분은 Google이 서비스 개선에 입력을 활용할 수 있으므로 내부 문서는 올리지 마세요.</div></details></div>
+<div class="panel"><h2>2. 기사 이미지 올리기</h2>
+<div class="drop" id="dz" onclick="$('fi').click()">기사별 이미지가 든 <b>zip 파일</b>과 <b>기사 목록 엑셀(제목·URL)</b>을 끌어다 놓거나 눌러서 선택<br><span class="hint">zip과 엑셀을 한꺼번에 선택해도 되고 따로 올려도 됩니다. 이미지는 파일 이름 순서대로 읽고, 엑셀의 URL은 파일명의 매체·제목으로 찾아 연결합니다.</span><input type="file" id="fi" accept=".zip,.xlsx,.xls,.json" multiple></div>
+<div class="msg" id="msg" style="display:none"></div><div class="bar" id="bar" style="display:none"><i id="bi"></i></div>
+<div class="row" style="margin-top:12px"><div style="flex:0 0 190px;min-width:150px"><label>보고서 날짜</label><input type="text" id="rdate" placeholder="YYYY-MM-DD" onchange="loadColl()"></div></div>
+<div class="hint" id="cst" style="margin-top:10px">수집된 관련 보도: 확인 중…</div><button class="g sm" style="margin-top:4px" onclick="loadColl()">관련 보도 새로 불러오기</button>
+<div class="modes"><label><input type="radio" name="mode" value="full" onchange="chg()"> 전체본 <span class="hint">(올린 기사 모두)</span></label><label><input type="radio" name="mode" value="sum" checked onchange="chg()"> 요약본 <span class="hint">(중요 기사만 선별)</span></label><label>구분별 최대 <input type="number" id="kn" min="1" step="1" value="3" oninput="chg()" style="width:64px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;font:inherit;background:var(--card);color:var(--tx)"> 건 <span class="hint">(요약본에 적용)</span></label><label>읽기 해상도 <select id="isz"><option value="800">최속 (800)</option><option value="1000" selected>빠름 (1000)</option><option value="1300">보통 (1300)</option><option value="1600">정확 (1600)</option></select></label></div>
+<div class="acts"><button class="g" id="stop" onclick="stopRun()" style="display:none">중지</button><button class="p" id="goq" onclick="runFast(false)">① 제목으로만 분류 (빠름)</button><button class="g" id="go" onclick="runFast(true)">② 제목 분류 후 못 가린 기사만 이미지 분석</button></div><div class="hint" style="text-align:right;margin-top:6px"><b>①</b> 엑셀 제목만으로 분류합니다. 못 가린 기사는 「분류 미정」에 둡니다. <b>②</b> ①을 한 뒤, 제목으로 못 가린 기사만 이미지(zip)를 읽어 다시 분류합니다(시간이 있을 때). 두 방법 모두 Gemini 키가 필요합니다. 관련 보도는 수집 파일에서 가져옵니다. 엑셀 기사가 수집된 관련 보도와 같은 기사이면 주요 이슈에 넣지 않고, 관련 보도의 「지면」 항목(엑셀의 제목·면수)으로 합칩니다.</div>
+<div style="margin-top:8px"><button class="g sm" onclick="diag()">진단: 1장 테스트</button> <button class="g sm" onclick="diagAll()">작동하는 모델 찾기</button> <span class="hint">분류가 안 될 때 원인을 화면에 그대로 보여줍니다 (이미지를 올린 뒤 누르세요)</span><pre id="dg" style="display:none;white-space:pre-wrap;word-break:break-all;font-size:11.5px;background:var(--soft);padding:8px;border-radius:6px;margin-top:8px;max-height:320px;overflow:auto"></pre></div></div>
+<div class="panel"><details id="hd"><summary id="hsum">저장된 보고서</summary><div id="hlist" style="margin-top:8px"></div></details></div>
+<div id="out" style="display:none"><div class="acts" style="margin:0"><button class="g" onclick="xl()">엑셀로 저장</button><button class="g" onclick="window.print()">인쇄 / PDF</button></div><div id="abar"><span><b id="sn">0</b>건 선택</span><button class="g sm" id="bo" onclick="outSel()">제외로 이동</button><button class="g sm" id="bi2" onclick="inSel()">포함으로 이동</button><select id="bsec" onchange="chSec(this.value)"></select><button class="g sm" onclick="clearSel()">선택 해제</button></div>
+<details class="crit"><summary>선별 기준 보기</summary><div class="hint" style="font-size:12px;line-height:1.8">AI는 기사에서 사실만 읽어냅니다(기관과의 관련 정도, 논조, 면수, 지면 비중, 같은 이슈를 쓴 매체 수). 중요도는 아래 고정 점수표로 계산하므로 같은 기사는 항상 같은 점수가 나옵니다.<br>· 「기관 관련 보도」 범위: 기사에 기관 이름이나 약칭(예: 문체부)이 글자로 실제 나온 기사만 해당합니다. 기관장 직함이나 산하기관 이름만 나온 기사는 주요 이슈의 해당 구분으로 갑니다.<br>· 기관 관련 기사의 중심 +4 / 단순 언급 +2 / 기관명은 없어도 소관·산하·유관 분야 기사 +3<br>· 기관에 대한 부정 논조 +3 / 긍정 논조 +1<br>· 1~3면 게재 +2<br>· 지면 비중(제목 크기·기사 길이) 큼 +2 / 보통 +1 / 작음 0<br>· 점수가 같으면 올려주신 순서를 따릅니다<br>· 같은 이슈를 다룬 다른 매체 1곳당 +1 (최대 +3)<br>· 기관 관련 보도: 기관이 나온 기사 중 4점 이상 / 주요 이슈(구분별): 점수 높은 순으로 최대 N건<br>· 정렬: 같은 이슈를 다룬 기사끼리 이웃하게 묶어 보여주고, 묶음 순서는 그 묶음의 최고 점수 순입니다(전체본은 올린 순서).<br>· 제외된 기사는 2페이지에 모이고, 기사 왼쪽 체크박스로 골라 1·2페이지 사이를 옮기거나 구분을 바꿀 수 있습니다. 판독하지 못한 기사는 항상 포함됩니다.</div></details><div id="rep"></div></div>
+</div>
+<div id="toast"></div>
+<script>
+const V2=true, KEY='aiclassF', $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LS={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const SEED={org:'',secs:['정책·행정','사업·현안','기타 보도','오피니언']};
+let ST=LS.get(KEY)||{cfg:SEED,profiles:{}}, FILES=[], EXL=[], COLL=[], COLLOK=false, ROWF={}, URLMAP={}, ARTS=[], RC=null, ctl=null, H=LS.get('aiclassF_h')||{}, SEL=new Set(), RUN=false, OVR='', LASTV=null, LASTDEL=-1;
+const isOp=n=>/오피니언|사설|칼럼/.test(n||'');
+function readCfg(){return{org:$('org').value.trim(),secs:[...document.querySelectorAll('#secs .sn')].map(i=>i.value.trim()).filter(Boolean)}}
+function addSec(n){const d=document.createElement('div');d.className='sr';d.innerHTML='<input type="text" class="sn" value="'+esc(typeof n==='string'?n:'')+'" placeholder="구분 이름" oninput="save()"><button class="g sm" onclick="this.parentNode.remove();save()">✕</button>';$('secs').appendChild(d)}
+function applyCfg(c){$('org').value=c.org||'';$('secs').innerHTML='';(c.secs||[]).forEach(s=>addSec(s));cnt()}
+function cnt(){const c=readCfg();$('pinfo').textContent=(c.org||'기관명 없음')+' · 구분 '+c.secs.length+'개'}
+function save(){ST.cfg=readCfg();LS.set(KEY,ST);cnt()}
+function profOpts(sel){const s=$('prof'),ks=Object.keys(ST.profiles);s.innerHTML=ks.map(k=>'<option>'+esc(k)+'</option>').join('')+'<option value="__new">+ 새 프로필 만들기</option>';s.value=sel!==undefined?sel:(ks.includes(ST.cur)?ST.cur:'__new')}
+function pick(){const n=$('prof').value;if(n==='__new'){applyCfg({org:'',secs:SEED.secs});$('pname').value='';$('pd').open=true}else if(ST.profiles[n]){applyCfg(ST.profiles[n]);$('pname').value=n;ST.cur=n;save()}}
+function saveProf(){const n=$('pname').value.trim(),c=readCfg();if(!n){msg('프로필 이름을 적어주세요','err');return}if(!c.org||!c.secs.length){msg('기관명과 구분을 입력해주세요','err');return}ST.profiles[n]=c;ST.cur=n;save();profOpts(n);$('pd').open=false;msg('프로필 \''+n+'\' 저장됨','ok')}
+function delProf(){const n=$('prof').value;if(ST.profiles[n]){delete ST.profiles[n];ST.cur='';save();profOpts();pick()}}
+function msg(t,c){const m=$('msg');m.textContent=t;m.className='msg '+c;m.style.display='block'}
+/* 파일 */
+const MIME={png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp',gif:'image/gif'};
+const ext=n=>(n.split('.').pop()||'').toLowerCase();
+const nk=s=>String(s==null?'':s).normalize('NFC').replace(/[^0-9A-Za-z가-힣]/g,'');
+function fileKey(n){return nk(String(n).replace(/\.[^.]+$/,'').replace(/^\d+_/,'').replace(/_\d{4}-\d{2}-\d{2}$/,''))}
+async function readXl(f){
+  if(typeof XLSX==='undefined'){msg('엑셀 도구를 불러오지 못했습니다. 인터넷 연결을 확인하세요','err');return false}
+  const wb=XLSX.read(await f.arrayBuffer(),{type:'array'}),ws=wb.Sheets['기사 목록']||wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''}),h=rows[0]||[];
+  const fi=re=>h.findIndex(x=>re.test(String(x)));
+  let t=fi(/제목/),m=fi(/매체/),pg=fi(/지면/),u=fi(/기사\s*url/i),nv=fi(/naver|네이버/i);
+  const hasH=t>=0;if(t<0)t=0;if(m<0)m=1;if(pg<0)pg=2;if(u<0)u=3;if(nv<0)nv=4;
+  const ok=x=>/^https?:\/\//i.test(String(x||'').trim());
+  EXL=rows.slice(hasH?1:0).filter(r=>String(r[t]||'').trim()).map(r=>({t:String(r[t]).trim(),m:String(r[m]||'').trim(),pg:String(r[pg]||'').trim(),u:ok(r[u])?String(r[u]).trim():(ok(r[nv])?String(r[nv]).trim():'')}));
+  return true}
+function matchUrls(){
+  URLMAP={};if(!FILES.length||!EXL.length)return 0;
+  const used=new Set(),ks=EXL.map(r=>nk(r.m+r.t)),res=new Array(FILES.length).fill(-1);
+  FILES.forEach((f,i)=>{const k=fileKey(f.name);if(!k)return;const j=ks.findIndex((x,j)=>!used.has(j)&&x===k);if(j>=0){used.add(j);res[i]=j}});
+  FILES.forEach((f,i)=>{if(res[i]>=0)return;const k=fileKey(f.name);if(k.length<10)return;const j=ks.findIndex((x,j)=>!used.has(j)&&x.length>=10&&(x.startsWith(k)||k.startsWith(x)));if(j>=0){used.add(j);res[i]=j}});
+  if(FILES.length===EXL.length)FILES.forEach((f,i)=>{if(res[i]<0&&!used.has(i)){used.add(i);res[i]=i}});
+  ROWF={};res.forEach((j,i)=>{if(j>=0)ROWF[j]=i});
+  let n=0;FILES.forEach((f,i)=>{const r=EXL[res[i]];if(r&&r.u){URLMAP[f.name]=r.u;n++}});
+  return n}
+function applyUrls(){let c=0;ARTS.forEach(a=>{if(a&&a.file&&URLMAP[a.file]&&a.url!==URLMAP[a.file]){a.url=URLMAP[a.file];c++}});if(c&&RC&&!RUN){saveHist();render()}}
+function status(){
+  const n=matchUrls(),a=[];if(FILES.length)a.push(FILES.length+'장의 기사 이미지');if(EXL.length)a.push('엑셀 '+EXL.length+'건');
+  if(!a.length){msg('이미지(png, jpg, webp)나 엑셀 파일을 찾지 못했습니다.','err');return}
+  let t=a.join(' + ')+'을 불러왔습니다.';
+  if(FILES.length&&EXL.length)t+=' URL '+n+'건 연결'+(n<FILES.length?' (나머지 '+(FILES.length-n)+'건은 URL 없음)':'')+'.';
+  else if(FILES.length)t+=' (보고서에 URL을 넣으려면 기사 목록 엑셀도 올려주세요.)';
+  t+=EXL.length?' 「분류 시작 (제목 기준 · 빠름)」을 누르세요.'+(FILES.length?'':' (이미지는 정밀 분류에만 필요합니다)'):(FILES.length?' 「이미지로 정밀 분류」를 누르거나, 빠른 분류를 하려면 기사 목록 엑셀도 올려주세요.':' 기사 목록 엑셀을 올려주세요.');
+  msg(t,'ok');applyUrls()}
+async function take(list){
+  const out=[];let got=false,jsn=false;
+  for(const f of list){const e=ext(f.name);
+    if(e==='zip'){
+      if(typeof JSZip==='undefined'){msg('zip 해제 도구를 불러오지 못했습니다. 인터넷 연결을 확인하세요','err');return}
+      const z=await JSZip.loadAsync(f);
+      for(const k of Object.keys(z.files)){const x=z.files[k];
+        if(x.dir||/(^|\/)(__MACOSX|\.)/.test(k)||!MIME[ext(k)])continue;
+        out.push({name:k.split('/').pop(),blob:new Blob([await x.async('arraybuffer')],{type:MIME[ext(k)]})})}
+    }else if(e==='json'){try{setColl(JSON.parse(await f.text()),'파일에서 불러옴');jsn=true}catch(err){msg('수집 파일을 읽지 못했습니다','err');return}}
+    else if(e==='xlsx'||e==='xls'){try{if(await readXl(f))got=true}catch(err){msg('엑셀을 읽지 못했습니다: '+(err&&err.message||err),'err');return}}
+    else if(MIME[e]){out.push({name:f.name,blob:f})}
+  }
+  if(out.length){out.sort((a,b)=>a.name.localeCompare(b.name,'ko',{numeric:true}));FILES=out}
+  if(out.length||EXL.length||!jsn)status()
+}
+const dz=$('dz');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('d')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('d'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('d');take([...e.dataTransfer.files])});
+$('fi').addEventListener('change',e=>{take([...e.target.files]);e.target.value=''});
+/* AI 분류 */
+const PRI_MIN=4;
+function buildPrompt(c,n){
+  return '아래에 신문 기사 이미지 '+n+'장이 [이미지 1], [이미지 2]… 순서로 주어집니다. 각 이미지의 글자를 읽고 내용을 이해한 뒤, 이미지마다 한 항목씩 아래 JSON 한 개만 출력하세요. 설명이나 코드블록은 쓰지 마세요.\n'+
+  '{"items":[{"k":이미지 번호,"title":"기사 제목","media":"매체명(보이면, 없으면 빈 문자열)","page":"지면(보이면, 없으면 빈 문자열)","section":"구분 목록 중 하나","role":"주체 또는 언급 또는 관련 또는 없음","tone":"긍정 또는 중립 또는 부정 또는 빈 문자열","point":"부정일 때 비판 내용 한 문장(50자 이내), 아니면 빈 문자열","size":"대 또는 중 또는 소"}]}\n'+
+  '구분 목록: '+c.secs.join(' / ')+'\n'+
+  '- 이미지와 같은 수의 항목을 k 순서대로 모두 출력하세요. 파일명에 매체·면수 정보가 있으면 참고하세요.\n'+
+  '- section: 위 목록의 이름을 글자 그대로 하나만 고르세요. 기사 내용에 가장 알맞은 구분을 고르고, 사설·칼럼 같은 의견 기사는 이름에 \'오피니언\'이 있는 구분을 고르세요.\n'+
+  (c.org?'- role: 기관은 "'+c.org+'"입니다. 기사에 기관 이름이나 그 약칭·줄임말(예: 문체부)이 글자로 실제 나온 경우에만 "주체" 또는 "언급"입니다. 기관의 정책·사업·발언이 기사의 중심이면 "주체", 본문에서 스치듯 언급되면 "언급"입니다. 기관 이름·약칭은 나오지 않고 기관장 직함이나 산하기관 이름만 나오거나, 그 기관의 소관 업무·산하기관·유관기관·담당 정책 분야를 직접 다룬 기사면 "관련", 그 외는 "없음".\n- tone: role이 "주체" 또는 "언급"일 때만 기관에 대한 기사 논조를 쓰고, 그 외에는 빈 문자열.\n':'- role은 항상 "없음", tone과 point는 빈 문자열.\n')+
+  '- size: 이미지 속 기사의 지면 비중. 제목이 크고 기사가 길면 "대", 보통이면 "중", 짧은 단신이면 "소".\n'+
+  '- 기사에 쓰인 사실만 판단하고 추측하지 마세요. 기사를 읽을 수 없으면 title에 "(판독 불가)", section은 빈 문자열, role은 "없음".';
+}
+function norm(r,i,c){r=r||{};const s=c.secs.includes(r.section)?r.section:'';const role=['주체','언급','관련'].includes(r.role)?r.role:'없음';
+  const tone=(role==='주체'||role==='언급')?(['긍정','중립','부정'].includes(r.tone)?r.tone:'중립'):'';
+  return{title:String(r.title||FILES[i].name),media:String(r.media||''),page:String(r.page||''),section:s,role,tone,point:tone==='부정'?String(r.point||''):'',pri:(role==='주체'||role==='언급'),size:['대','중','소'].includes(r.size)?r.size:'중',n:1,fail:false,file:FILES[i].name,url:URLMAP[FILES[i].name]||''}}
+function front(pg){const m=/^([A-Za-z]?)\s*0*(\d+)/.exec(String(pg||'').trim());return !!m&&(m[1]===''||m[1].toUpperCase()==='A')&&+m[2]>=1&&+m[2]<=3}
+function score(a){let s=0;const w=[];
+  if(a.role==='주체'){s+=4;w.push('기관 관련 기사의 중심')}else if(a.role==='언급'){s+=2;w.push('기관 언급')}
+  if(a.role==='관련'){s+=3;w.push('소관·유관 분야 기사')}
+  if(a.tone){if(a.tone==='부정'){s+=3;w.push('부정 논조')}else if(a.tone==='긍정'){s+=1;w.push('긍정 논조')}}
+  if(front(a.page)){s+=2;w.push(a.page+' 게재')}
+  if(a.size==='대'){s+=2;w.push('지면 비중 큼')}else if(a.size==='중'){s+=1;w.push('지면 비중 보통')}
+  if(a.n>1){s+=Math.min(a.n-1,3);w.push(a.n+'개 매체 보도')}
+  return{s,w}}
+async function cluster(smp){
+  const A=ARTS.map((a,i)=>[a,i]).filter(x=>x[0]&&!x[0].fail);
+  if(A.length<2||ctl.signal.aborted)return;
+  try{const r=await smp.json('다음은 오늘 신문 기사 목록입니다(번호|매체|제목). 같은 사건·정책·이슈를 다루는 기사끼리 묶어 JSON {"groups":[[번호,번호],...]} 한 개만 출력하세요. 2건 이상인 묶음만 쓰고, 서로 다른 사안은 묶지 마세요.\n'+A.map(x=>x[1]+'|'+x[0].media+'|'+x[0].title).join('\n'),{signal:ctl.signal});
+    (r.groups||[]).forEach((g,gi)=>{if(!Array.isArray(g))return;const m=g.map(k=>ARTS[k]).filter(Boolean);const n=new Set(m.map((a,j)=>a.media||('?'+j))).size;m.forEach(a=>{a.n=Math.max(a.n,n);if(!a.g)a.g=gi+1})})}catch(e){}
+}
+/* AI 연결 (Google Gemini 무료 키 · 키는 이 브라우저에만 저장) */
+let NOTHINK=false,LIMW='',COOL=0,LASTERR='',BAD=new Set();const sleep=ms=>new Promise(r=>setTimeout(r,ms)), GB='https://generativelanguage.googleapis.com/v1beta/', BATCH=6;
+function aiKey(){try{return localStorage.getItem('gkey')||''}catch(e){return ''}}
+function aiModel(){try{return localStorage.getItem('gmodel')||''}catch(e){return ''}}
+function keyNote(){$('knote').textContent=aiKey()?'연결됨'+(aiModel()?' · '+aiModel():''):'키 입력 필요';fillModels()}
+function flashList(list){return (list||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>String(m.name).replace(/^models\//,'')).filter(n=>/flash/.test(n)&&!/image|tts|live|audio|embedding|robotics|computer/.test(n))}
+function getModels(){try{return JSON.parse(localStorage.getItem('gmodels')||'[]')}catch(e){return[]}}
+function fillModels(){const g=$('gm');if(!g)return;const L=getModels(),cur=aiModel(),all=(!cur||L.includes(cur))?L:[cur].concat(L);
+  g.innerHTML=all.length?all.map(n=>'<option value="'+esc(n)+'"'+(n===cur?' selected':'')+'>'+esc(n)+(/lite/.test(n)?' (가벼움 · 한도 넉넉)':'')+'</option>').join(''):'<option value="">키를 저장하면 목록이 표시됩니다</option>'}
+function setModel(v){if(!v)return;try{localStorage.setItem('gmodel',v)}catch(e){}keyNote();msg('모델을 '+v+'(으)로 바꿨습니다.','ok')}
+async function loadModels(){if(!aiKey())return;try{const r=await fetch(GB+'models?pageSize=200',{headers:{'x-goog-api-key':aiKey()}});if(r.ok){const L=flashList((await r.json()).models);if(L.length){try{localStorage.setItem('gmodels',JSON.stringify(L))}catch(e){}}}}catch(e){}fillModels()}
+function pickGem(list){const L=(list||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>String(m.name).replace(/^models\//,''));
+  const ok=L.filter(n=>/^gemini-[\d.]+-flash$/.test(n)).sort((a,b)=>parseFloat(b.split('-')[1])-parseFloat(a.split('-')[1]));
+  return ok[0]||L.find(n=>/flash/.test(n)&&!/lite|preview|exp|image|tts|live|thinking/.test(n))||''}
+async function setKey(){const v=$('akey').value.trim();
+  if(!v){try{localStorage.removeItem('gkey');localStorage.removeItem('gmodel')}catch(e){}keyNote();msg('저장된 키를 지웠습니다.','ok');return}
+  if(/\s/.test(v)||v.length<20){msg('키가 너무 짧거나 공백이 섞여 있습니다. 복사 아이콘으로 다시 복사해 붙여넣어 주세요.','err');return}
+  if(/[^\x21-\x7E]/.test(v)){msg('키에 한글이나 눈에 보이지 않는 문자가 섞여 있습니다. 영문 입력 상태에서 복사 아이콘으로 다시 붙여넣어 주세요.','err');return}
+  if(location.protocol==='https:'&&/claude\.(ai|com)|anthropic|claudeusercontent/i.test(location.hostname)){msg('Claude 화면 안에서는 구글 연결이 차단됩니다. 이 파일을 PC에 저장한 뒤 더블클릭해서 크롬/엣지로 열어주세요.','err');return}
+  $('kbtn').disabled=true;msg('키를 확인하는 중…','ok');
+  try{const r=await fetch(GB+'models?pageSize=200',{headers:{'x-goog-api-key':v}});
+    if(!r.ok){let m='';try{m=(await r.json()).error.message}catch(e){}msg('이 키는 사용할 수 없습니다'+(m?': '+m:'')+'. 키를 다시 복사해 붙여넣어 주세요.','err');$('kbtn').disabled=false;return}
+    const j=await r.json(),mod=pickGem(j.models);
+    if(!mod){msg('키는 맞지만 사용할 수 있는 Gemini Flash 모델을 찾지 못했습니다.','err');$('kbtn').disabled=false;return}
+    try{localStorage.setItem('gkey',v);localStorage.setItem('gmodel',mod);localStorage.setItem('gmodels',JSON.stringify(flashList(j.models)))}catch(e){}
+    $('akey').value='';keyNote();$('kd').open=false;msg('연결되었습니다 ('+mod+'). 이제 zip 파일을 올려 분류를 시작하세요.','ok')}
+  catch(e){msg('Google에 연결하지 못했습니다 ['+(e&&e.message?e.message:e)+']. 이 파일이 PC에 저장된 상태(주소창이 file:///로 시작)로 열렸는지, 인터넷 상태는 어떤지 확인해주세요.','err')}
+  $('kbtn').disabled=false}
+async function imgB64(b){const bm=await createImageBitmap(b),r=Math.min(1,(parseInt($('isz').value,10)||1000)/Math.max(bm.width,bm.height)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(bm.width*r));c.height=Math.max(1,Math.round(bm.height*r));c.getContext('2d').drawImage(bm,0,0,c.width,c.height);return c.toDataURL('image/jpeg',.7).split(',')[1]}
+function nextModel(){const cur=aiModel(),c=getModels().filter(n=>!BAD.has(n)&&n!==cur),ver=n=>parseFloat((String(n).match(/gemini-([\d.]+)/)||[0,0])[1]);
+  c.sort((a,b)=>ver(b)-ver(a)||(/lite/.test(a)?1:0)-(/lite/.test(b)?1:0));
+  const st=c.filter(n=>!/preview|exp|thinking/.test(n));let r=st[0]||c[0]||'';
+  if(!r&&!BAD.has('gemini-3.8-flash')&&cur!=='gemini-3.8-flash')r='gemini-3.8-flash';return r}
+async function waitCool(why,sig){while(COOL>Date.now()){if(sig&&sig.aborted)throw{code:'cancelled'};msg(why+'… '+Math.ceil((COOL-Date.now())/1000)+'초 남음','ok');await sleep(1000)}}
+async function gem(parts,o){o=o||{};
+  for(let t=0;t<5;t++){let r;await waitCool('한도 대기 중',o.signal);const mdl=aiModel();
+    try{r=await fetch(GB+'models/'+mdl+':generateContent',{method:'POST',signal:o.signal,headers:{'content-type':'application/json','x-goog-api-key':aiKey()},body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:Object.assign({temperature:0,responseMimeType:'application/json',maxOutputTokens:o.max||4000},NOTHINK?{}:{thinkingConfig:{thinkingBudget:0}})})})}
+    catch(e){if(o.signal&&o.signal.aborted)throw{code:'cancelled'};if(t===4)throw{code:'network',message:'네트워크 오류'};await sleep(1500);continue}
+    if(!r.ok){let m='',ej=null;try{ej=(await r.json()).error;m=ej.message||''}catch(e){}
+      const full=m+' '+JSON.stringify(ej||{});
+      if(r.status===400&&/thinking/i.test(m)&&!NOTHINK){NOTHINK=true;t--;continue}
+      if(r.status===401||r.status===403||(r.status===400&&/API key|API_KEY/i.test(m)))throw{code:'not_granted',message:'API 키 오류로 분류를 중단했습니다: '+(m||r.status)};
+      if(r.status===404||(r.status===429&&/limit:\s*0/i.test(m))){BAD.add(mdl);if(aiModel()!==mdl){t--;continue}
+        const nx=nextModel();if(!nx)throw{code:'not_granted',message:'사용할 수 있는 모델을 찾지 못했습니다. 「사용할 모델」에서 다른 모델을 골라주세요: '+m};
+        try{localStorage.setItem('gmodel',nx)}catch(e){}keyNote();msg(mdl+' 모델은 지금 쓸 수 없어('+(r.status===404?'제공 종료':'무료 한도 0')+') '+nx+'(으)로 바꿔 다시 시도합니다…','ok');t--;continue}
+      if(r.status===429||r.status>=500){
+        if(r.status===429&&/per ?day|daily/i.test(full))throw{code:'not_granted',message:'오늘 무료 사용 한도를 모두 썼습니다('+aiModel()+'). 위 「사용할 모델」에서 다른 3.x 모델로 바꿔 다시 시도하거나, 한국 시간 오후 4시경 초기화된 뒤 다시 시도해주세요.'};
+        if(t===4)throw{code:'busy',message:'요청 한도에 걸려 읽지 못했습니다'};
+        const rd=((ej&&ej.details)||[]).map(d=>d&&d.retryDelay).find(Boolean),sec=rd?Math.ceil(parseFloat(rd))+2:15*(t+1),w=Math.min(sec,90)*1000;COOL=Math.max(COOL,Date.now()+w);await waitCool((r.status===429?'무료 한도(분당) 때문에 대기':'서버 혼잡으로 대기')+' · '+aiModel(),o.signal);continue}
+      throw{code:'api',message:m||('오류 '+r.status)}}
+    const j=await r.json(),txt=(((j.candidates||[])[0]||{}).content&&((j.candidates[0].content.parts)||[]).map(x=>x.text||'').join(''))||'',mm=txt.replace(/```json|```/g,'').match(/[\{\[][\s\S]*[\}\]]/);
+    if(!mm){if(t<2){await sleep(1000);continue}const fr=((j.candidates||[])[0]||{}).finishReason||(j.promptFeedback&&j.promptFeedback.blockReason)||'';throw{code:'parse',message:'모델이 읽을 수 있는 답을 주지 않았습니다'+(fr?' ('+fr+')':'')+' · 모델: '+aiModel()}}
+    try{return JSON.parse(mm[0])}catch(e){if(t<2){await sleep(1000);continue}throw{code:'parse',message:'응답을 해석하지 못했습니다'}}}}
+function getAI(){
+  if(!aiKey()||!aiModel()){$('kd').open=true;msg('먼저 「Gemini 키 연결」에서 무료 키를 입력해주세요.','err');return null}
+  return{json:(prompt,o)=>gem([{text:prompt}],o)}}
+async function readBatch(idxs,c,smp,sig){
+  const parts=[{text:buildPrompt(c,idxs.length)}];
+  for(let k=0;k<idxs.length;k++){parts.push({text:'[이미지 '+(k+1)+'] 파일명: '+FILES[idxs[k]].name});parts.push({inline_data:{mime_type:'image/jpeg',data:await imgB64(FILES[idxs[k]].blob)}})}
+  const r=await gem(parts,{signal:sig,max:900*idxs.length+500}),got={};
+  let arr=Array.isArray(r)?r:(Array.isArray(r&&r.items)?r.items:(Object.values(r||{}).find(Array.isArray)||((r&&r.title)?[r]:[])));
+  arr=arr.filter(x=>x&&typeof x==='object');
+  if(!arr.length)LASTERR='응답 형식을 알 수 없습니다 · 모델: '+aiModel()+' · 응답: '+JSON.stringify(r).slice(0,160);
+  arr.forEach((x,p)=>{const k=parseInt(x&&x.k,10);const kk=(k>=1&&k<=idxs.length)?k:p+1;if(x&&!got[kk])got[kk]=x});
+  return got}
+async function run(){
+  const c=readCfg();
+  if(!c.secs.length){msg('구분을 하나 이상 설정해주세요 (프로필 추가·편집)','err');return}
+  if(!FILES.length){msg('먼저 기사 이미지를 올려주세요','err');return}
+  const rd=$('rdate').value||todayStr();
+  if(H[rd]&&OVR!==rd){OVR=rd;msg(rd+' 날짜에 저장된 보고서가 있습니다. 다시 분류하면 덮어씁니다. 계속하려면 「AI로 분류 시작」을 한 번 더 누르세요.','err');return}
+  OVR='';
+  const smp=getAI();if(!smp)return;
+  RC=c;RUN=true;SEL.clear();ARTS=new Array(FILES.length).fill(null);ctl=new AbortController();
+  $('go').style.display='none';$('goq').style.display='none';$('stop').style.display='';$('bar').style.display='block';$('bi').style.width='0';$('out').style.display='block';
+  const batches=[];for(let i=0;i<FILES.length;i+=BATCH)batches.push(Array.from({length:Math.min(BATCH,FILES.length-i)},(_,k)=>i+k));
+  let nb=0,done=0,quit=false,errMsg='';const miss=[];
+  const prog=()=>{$('bi').style.width=(done/FILES.length*100)+'%';msg('기사 읽는 중… '+done+' / '+FILES.length,'ok');render()};
+  const fail=i=>{ARTS[i]={title:FILES[i].name+' (판독 실패)',media:'',page:'',section:'',role:'없음',tone:'',point:'',pri:false,size:'소',n:1,fail:true,file:FILES[i].name,url:URLMAP[FILES[i].name]||''};done++};
+  const handle=async(idxs)=>{
+    try{const got=await readBatch(idxs,c,smp,ctl.signal);
+      idxs.forEach((i,k)=>{const x=got[k+1];if(x){ARTS[i]=norm(x,i,c);done++}else miss.push(i)})}
+    catch(e){if(e&&e.code==='cancelled'){quit=true;return}
+      if(e&&e.code==='not_granted'){quit=true;errMsg=e.message;return}
+      LASTERR=(e&&(e.message||e.code))||String(e);idxs.forEach(i=>miss.push(i))}
+    prog()};
+  const worker=async()=>{while(!quit&&nb<batches.length&&!ctl.signal.aborted)await handle(batches[nb++])};
+  await Promise.all([worker(),worker()]);
+  if(!quit&&miss.length){const again=miss.splice(0);msg('읽지 못한 '+again.length+'건을 다시 시도합니다…','ok');
+    for(const i of again){if(quit||ctl.signal.aborted)break;
+      try{const got=await readBatch([i],c,smp,ctl.signal);if(got[1]){ARTS[i]=norm(got[1],i,c);done++}else fail(i)}
+      catch(e){if(e&&e.code==='cancelled'){quit=true;break}if(e&&e.code==='not_granted'){quit=true;errMsg=e.message;break}LASTERR=(e&&(e.message||e.code))||String(e);fail(i)}
+      prog()}}
+  const bad=ARTS.filter(a=>a&&a.fail).length;
+  if(!quit&&done===FILES.length&&!ctl.signal.aborted){msg('같은 이슈를 다룬 기사 확인 중…','ok');await cluster(smp)}
+  $('go').style.display='';$('goq').style.display='';$('stop').style.display='none';
+  if(errMsg)msg(errMsg+' ('+done+'건까지 분류됨)','err');
+  else if(done===FILES.length&&ARTS.filter(a=>a&&/판독 불가/.test(a.title)).length>FILES.length/2)msg('AI가 대부분의 이미지를 읽지 못했다고 답했습니다. 「사용할 모델」을 gemini-2.5-flash 같은 일반 flash 모델로 바꾸거나, 읽기 해상도를 보통(1300) 이상으로 올려 다시 시도해주세요.','err');
+  else if(done===FILES.length)msg('분류 완료: '+done+'건'+(bad?' (판독 실패 '+bad+'건은 분류 미정에 포함'+(LASTERR?' · 원인: '+LASTERR:'')+')':''),'ok');
+  else msg('중지했습니다. '+done+'건까지 분류되었습니다.','ok');
+  RUN=false;saveHist();render();
+}
+async function diagAll(){
+  const o=$('dg');o.style.display='block';const out=[],log=t=>{out.push(t);o.textContent=out.join('\n')};
+  if(!aiKey()){log('키가 저장되어 있지 않습니다. 먼저 키를 저장하세요.');return}
+  log('키에서 쓸 수 있는 모델 목록을 가져오는 중…');
+  try{const r=await fetch(GB+'models?pageSize=200',{headers:{'x-goog-api-key':aiKey()}});
+    if(!r.ok){log('목록 조회 실패 HTTP '+r.status);return}
+    const L=flashList((await r.json()).models);try{localStorage.setItem('gmodels',JSON.stringify(L))}catch(e){}fillModels();
+    const ver=n=>parseFloat((String(n).match(/gemini-([\d.]+)/)||[0,0])[1]);
+    L.sort((a,b)=>ver(b)-ver(a)||(/lite/.test(a)?1:0)-(/lite/.test(b)?1:0));
+    log('모델 '+L.length+'개를 한 번씩 시험합니다(아주 짧은 요청).\n');const ok=[];
+    for(const n of L){
+      try{const r2=await fetch(GB+'models/'+n+':generateContent',{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':aiKey()},body:JSON.stringify({contents:[{role:'user',parts:[{text:'JSON {"ok":true} 만 출력하세요.'}]}],generationConfig:{temperature:0,responseMimeType:'application/json',maxOutputTokens:50}})});
+        if(r2.ok){ok.push(n);log('✔ '+n+' : 작동')}
+        else{let m='';try{m=(await r2.json()).error.message}catch(e){}log('✘ '+n+' : HTTP '+r2.status+' '+m.replace(/\s+/g,' ').slice(0,90))}}
+      catch(e){log('✘ '+n+' : 연결 실패')}
+      await sleep(400)}
+    const pick=ok.find(n=>!/preview|exp|thinking|lite/.test(n))||ok.find(n=>!/preview|exp|thinking/.test(n))||ok[0];
+    if(pick){try{localStorage.setItem('gmodel',pick)}catch(e){}keyNote();log('\n→ 작동하는 모델 중 「'+pick+'」을 선택했습니다. 이제 분류를 시작하세요.')}
+    else log('\n→ 작동하는 모델이 없습니다. 위 내용을 그대로 알려주세요.')}
+  catch(e){log('시험 중 오류: '+(e&&e.message||e))}
+}
+async function diag(){
+  const o=$('dg');o.style.display='block';const out=[],log=t=>{out.push(t);o.textContent=out.join('\n\n')};
+  log('모델: '+aiModel()+' · 키: '+(aiKey()?'있음':'없음')+' · 올린 이미지: '+FILES.length+'장 · 해상도: '+$('isz').value);
+  if(!aiKey()||!aiModel()){log('키가 저장되어 있지 않습니다. 먼저 키를 저장하세요.');return}
+  const url=GB+'models/'+aiModel()+':generateContent',hd={'content-type':'application/json','x-goog-api-key':aiKey()};
+  try{const r=await fetch(url,{method:'POST',headers:hd,body:JSON.stringify({contents:[{role:'user',parts:[{text:'JSON {"ok":true} 만 출력하세요.'}]}],generationConfig:{temperature:0,responseMimeType:'application/json'}})});
+    log('[1. 글자만 보내기] HTTP '+r.status+'\n'+(await r.text()).slice(0,400))}catch(e){log('[1. 글자만 보내기] 실패: '+(e&&e.message||e))}
+  if(!FILES.length){log('이미지를 올리지 않아 2번 시험은 건너뜁니다.');return}
+  try{const c=readCfg(),parts=[{text:buildPrompt(c,1)},{text:'[이미지 1] 파일명: '+FILES[0].name},{inline_data:{mime_type:'image/jpeg',data:await imgB64(FILES[0].blob)}}];
+    const r=await fetch(url,{method:'POST',headers:hd,body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:Object.assign({temperature:0,responseMimeType:'application/json',maxOutputTokens:1400},NOTHINK?{}:{thinkingConfig:{thinkingBudget:0}})})});
+    log('[2. 이미지 1장 보내기] HTTP '+r.status+'\n'+(await r.text()).slice(0,1200))}catch(e){log('[2. 이미지 1장 보내기] 실패: '+(e&&e.message||e))}
+}
+/* 제목 기준 빠른 분류: 엑셀의 제목·매체·지면만 AI에 보냄 */
+function fastPrompt(c,L){
+  return '아래는 오늘 신문 기사 목록입니다(번호|매체|지면|제목). 기사 본문은 없고 제목만 있습니다. 각 기사마다 한 항목씩 아래 JSON 한 개만 출력하세요. 설명이나 코드블록은 쓰지 마세요.\n'+
+  '{"items":[{"k":번호,"section":"구분 목록 중 하나","role":"주체 또는 관련 또는 없음","tone":"긍정 또는 중립 또는 부정 또는 빈 문자열","point":"부정일 때 비판 내용 한 문장(50자 이내), 아니면 빈 문자열"}]}\n'+
+  '구분 목록: '+c.secs.join(' / ')+'\n'+
+  '- 목록의 모든 번호를 k 그대로 빠짐없이 출력하세요.\n'+
+  '- section: 목록의 이름을 글자 그대로 하나만 고르되, 제목만으로 도저히 알 수 없으면 빈 문자열로 두세요. 제목에서 알 수 있는 내용에 가장 알맞은 구분을 고르고, 사설·칼럼 같은 의견 기사로 보이면 이름에 \'오피니언\'이 있는 구분을 고르세요.\n'+
+  (c.org?'- role: 기관은 "'+c.org+'"입니다. 제목에 기관 이름이나 그 약칭·줄임말(예: 문체부)이 글자로 나오면 "주체", 그렇지 않지만 제목만으로 그 기관의 소관 업무·산하기관·유관기관·담당 정책 분야를 직접 다룬 기사임이 분명하면 "관련", 그 외는 "없음". 제목만으로 불확실하면 "없음".\n- tone: role이 "주체"일 때만 제목이 기관에 대해 보이는 논조를 쓰고, 분명하지 않으면 "중립". 그 외에는 빈 문자열.\n':'- role은 항상 "없음", tone과 point는 빈 문자열.\n')+
+  '- 제목에 쓰인 사실만 판단하고 추측하지 마세요.\n\n'+L.map(x=>x[0]+'|'+x[1].media+'|'+x[1].page+'|'+x[1].title).join('\n')}
+function applyF(a,x,c){
+  const sec=c.secs.includes(x.section)?x.section:'';let role=['주체','언급','관련'].includes(x.role)?x.role:'없음';
+  if(c.org&&role!=='주체'&&nk(a.title).includes(nk(c.org)))role='주체';
+  const tone=(role==='주체'||role==='언급')?(['긍정','중립','부정'].includes(x.tone)?x.tone:'중립'):'';
+  Object.assign(a,{section:sec,role,tone,point:tone==='부정'?String(x.point||''):'',pri:(role==='주체'||role==='언급')})}
+async function runFast(withImg){
+  if(RUN)return;
+  const c=readCfg();
+  if(!c.secs.length){msg('구분을 하나 이상 설정해주세요 (프로필 추가·편집)','err');return}
+  if(!EXL.length){msg('제목 기준 분류에는 기사 목록 엑셀(제목·매체·URL)이 필요합니다. 엑셀을 먼저 올려주세요.','err');return}
+  const rd=$('rdate').value||todayStr();
+  if(H[rd]&&OVR!==rd){OVR=rd;msg(rd+' 날짜에 저장된 보고서가 있습니다. 다시 분류하면 덮어씁니다. 계속하려면 한 번 더 눌러주세요.','err');return}
+  OVR='';
+  const smp=getAI();if(!smp)return;
+  RC=c;RUN=true;SEL.clear();ctl=new AbortController();LASTERR='';
+  ARTS=EXL.map(r=>({title:r.t,media:r.m,page:r.pg,section:'',role:'없음',tone:'',point:'',pri:false,size:'중',n:1,fail:false,file:'',url:r.u}));
+  $('go').style.display='none';$('goq').style.display='none';$('stop').style.display='';$('bar').style.display='block';$('bi').style.width='0';$('out').style.display='block';
+  const N=ARTS.length,B=30;let done=0,quit=false,errMsg='',pending=ARTS.map((a,i)=>i);
+  msg('제목 읽는 중… 0 / '+N+' ('+aiModel()+')','ok');
+  for(let pass=0;pass<2&&pending.length&&!quit;pass++){
+    const todo=pending.splice(0),nb=[];for(let k=0;k<todo.length;k+=B)nb.push(todo.slice(k,k+B));
+    for(const idxs of nb){
+      if(quit||ctl.signal.aborted){quit=true;break}
+      try{const r=await gem([{text:fastPrompt(c,idxs.map(i=>[i+1,ARTS[i]]))}],{signal:ctl.signal,max:idxs.length*130+800}),got={};
+        let arr=Array.isArray(r)?r:(Array.isArray(r&&r.items)?r.items:(Object.values(r||{}).find(Array.isArray)||[]));
+        arr=arr.filter(x=>x&&typeof x==='object');
+        if(!arr.length)LASTERR='응답 형식을 알 수 없습니다 · 모델: '+aiModel()+' · 응답: '+JSON.stringify(r).slice(0,160);
+        arr.forEach((x,p)=>{let k=parseInt(x.k,10);if(!(k>=1&&k<=N))k=idxs[p]+1;if(!got[k])got[k]=x});
+        idxs.forEach(i=>{const x=got[i+1];if(x){applyF(ARTS[i],x,c);done++}else pending.push(i)})}
+      catch(e){if(e&&e.code==='cancelled'){quit=true;break}if(e&&e.code==='not_granted'){quit=true;errMsg=e.message;break}LASTERR=(e&&(e.message||e.code))||String(e);idxs.forEach(i=>pending.push(i))}
+      $('bi').style.width=(done/N*100)+'%';msg('제목 읽는 중… '+done+' / '+N+' ('+aiModel()+')','ok');render()}}
+  if(!quit&&!ctl.signal.aborted&&done>1){msg('같은 이슈를 다룬 기사 확인 중…','ok');await cluster(smp)}
+  let imgNote='';
+  if(withImg&&!quit&&!ctl.signal.aborted){
+    const un=ARTS.map((a,i)=>i).filter(i=>!ARTS[i].section&&ROWF[i]!==undefined),noFile=ARTS.filter(a=>!a.section).length-un.length;
+    let d2=0;
+    for(let k=0;k<un.length&&!quit&&!ctl.signal.aborted;k+=6){const part=un.slice(k,k+6);
+      msg('제목으로 못 가린 기사 이미지 분석 중… '+d2+' / '+un.length,'ok');
+      try{const got=await readBatch(part.map(i=>ROWF[i]),c,smp,ctl.signal);part.forEach((i,p)=>{const x=got[p+1];if(x&&c.secs.includes(x.section)){ARTS[i].section=x.section;if(['대','중','소'].includes(x.size))ARTS[i].size=x.size}})}
+      catch(e){if(e&&e.code==='cancelled'){quit=true;break}if(e&&e.code==='not_granted'){quit=true;errMsg=e.message;break}LASTERR=(e&&(e.message||e.code))||String(e)}
+      d2+=part.length;render()}
+    imgNote='이미지 분석 '+un.length+'건'+(noFile>0?' · 이미지를 찾지 못한 '+noFile+'건':'')}
+  $('go').style.display='';$('goq').style.display='';$('stop').style.display='none';
+  const left=N-done,unc=ARTS.filter(a=>!a.section).length;
+  if(errMsg)msg(errMsg+' ('+done+'건까지 분류됨)','err');
+  else if(!quit&&left===0)msg('분류 완료: '+done+'건 ('+(withImg?'제목 + 이미지':'제목 기준')+')'+(imgNote?' · '+imgNote:'')+(unc?' · 분류 미정 '+unc+'건':'')+(LASTERR&&withImg?' · 참고: '+LASTERR:''),'ok');
+  else if(!quit)msg('분류 완료: '+done+'건 · 분류하지 못한 '+left+'건은 「분류 미정」에 있습니다.'+(LASTERR?' 원인: '+LASTERR:''),'err');
+  else msg('중지했습니다. '+done+'건까지 분류되었습니다.','ok');
+  RUN=false;saveHist();render()}
+function stopRun(){if(ctl)ctl.abort();$('go').style.display='';$('goq').style.display='';$('stop').style.display='none'}
+/* 수집된 관련 보도 (GitHub 수집기가 만든 data/날짜.json) */
+const MEDIA=['조선일보','중앙일보','동아일보','한국일보','경향신문','한겨레','매일경제','한국경제','서울경제','파이낸셜뉴스','이데일리','세계일보','국민일보','서울신문','전자신문','머니투데이'];
+const uk=u=>String(u||'').toLowerCase().replace(/^https?:\/\/(www\.)?/,'').replace(/[?#].*$/,'').replace(/\/$/,'');
+const nid=u=>{const m=String(u||'').match(/\/article\/(\d{3})\/(\d+)|oid=(\d+)&aid=(\d+)/);return m?(m[1]?m[1]+'-'+m[2]:m[3]+'-'+m[4]):''};
+const bg=t=>{t=nk(t);const r=new Set();for(let i=0;i<t.length-1;i++)r.add(t.slice(i,i+2));return r};
+function sim(a,b){const x=bg(a),y=bg(b);if(!x.size||!y.size)return 0;let n=0;x.forEach(k=>{if(y.has(k))n++});return 2*n/(x.size+y.size)}
+function matchColl(a){const u=uk(a.url),id=nid(a.url);
+  for(const c of COLL){if(u&&(u===uk(c.url)||u===uk(c.link)))return c;if(id&&id===c.id)return c}
+  const m=nk(a.media);if(!m)return null;
+  for(const c of COLL){if(nk(c.media)===m&&sim(a.title,c.title)>=0.55)return c}
+  return null}
+function collSplit(cm){const MO=MEDIA.map(nk),mi=c=>{const i=MO.indexOf(nk(c.media));return i<0?99:i},pn=c=>parseInt((String(c.page||'').match(/(\d+)/)||[0,999])[1],10);
+  const by=(x,y)=>mi(x)-mi(y)||pn(x)-pn(y)||String(x.pub).localeCompare(String(y.pub));
+  const L=COLL.map(c=>{const a=cm&&cm.get(c);return a?Object.assign({},c,{title:a.title,page:a.page||c.page,section:'지면',url:a.url||c.url}):c});
+  return{p:L.filter(c=>c.section==='지면').sort(by),o:L.filter(c=>c.section!=='지면').sort(by)}}
+function collHtml(cm){const s=collSplit(cm),it=c=>'<div class="it"><div class="ti">■ <a href="'+esc(c.url||c.link)+'" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">'+esc(c.title)+'</a> <span>('+esc([c.media,c.page].filter(Boolean).join(', '))+')</span></div></div>';
+  const blk=(n,a)=>'<div class="cat">'+n+' · '+a.length+'건</div>'+(a.length?a.map(it).join(''):'<div class="empty">해당 기사 없음</div>');
+  return blk('지면',s.p)+blk('온라인',s.o)}
+function setColl(j,src){COLL=(j&&j.items)||[];COLLOK=true;if(!RC)RC=readCfg();$('out').style.display='block';
+  const np=COLL.filter(c=>c.section==='지면').length;$('cst').textContent='수집된 관련 보도: '+COLL.length+'건 (지면 '+np+' · 온라인 '+(COLL.length-np)+')'+(j&&j.updated?' · 갱신 '+j.updated:'')+(src?' · '+src:'');render()}
+async function loadColl(){const d=$('rdate').value||todayStr();
+  try{const r=await fetch('data/'+d+'.json?t='+Date.now());if(!r.ok)throw 0;setColl(await r.json(),'')}
+  catch(e){COLL=[];COLLOK=false;$('cst').textContent='수집된 관련 보도: '+d+' 파일을 찾지 못했습니다. (수집 파일 .json을 위 업로드 칸에 직접 올릴 수도 있습니다)';if(RC)render()}}
+/* 보고서 */
+/* 같은 이슈 묶음(g)끼리 이웃하게 정렬 */
+function gsort(L,full){const b={},K=a=>a.g||('s'+a.i);
+  L.forEach(a=>{const k=K(a),o=b[k];if(!o)b[k]={sc:a.sc,i:a.i};else{if(a.sc>o.sc)o.sc=a.sc;if(a.i<o.i)o.i=a.i}});
+  return L.sort((x,y)=>{const kx=K(x),ky=K(y);
+    if(kx!==ky){const p=b[kx],q=b[ky];return full?(p.i-q.i):(q.sc-p.sc||p.i-q.i)}
+    return y.sc-x.sc||x.i-y.i})}
+function view(){
+  const c=RC,full=document.querySelector('input[name=mode]:checked').value==='full',K=Math.max(1,parseInt($('kn').value,10)||3);
+  const A=ARTS.map((a,i)=>{if(a&&!a.del){const r=score(a);a.sc=r.s;a.tg=r.w;a.i=i;return a}return null}).filter(Boolean);
+  const V={full,K,pri:[],secs:{},unk:[],ex:[],cm:new Map()};c.secs.forEach(s=>V.secs[s]=[]);
+  const usePri=!COLLOK;
+  A.forEach(a=>{
+    if(COLLOK){const mc=matchColl(a);a.dup=!!mc;if(mc&&a.manual!=='in'){if(!V.cm.has(mc))V.cm.set(mc,a);return}}
+    const pr=a.pri&&usePri;
+    if(a.fail||(!a.section&&!pr)){V.unk.push(a);return}
+    if(pr){if(full||a.sc>=PRI_MIN){V.pri.push(a);return}
+      if(!a.section){V.ex.push(a);return}}
+    (V.secs[a.section]||V.unk).push(a)});
+  const byScore=(x,y)=>y.sc-x.sc||x.i-y.i,byIdx=(x,y)=>x.i-y.i;
+  if(!full)c.secs.forEach(s=>{const L=V.secs[s].sort(byScore);V.secs[s]=L.slice(0,K);L.slice(K).forEach(a=>V.ex.push(a))});
+  const out=a=>a.manual==='out';
+  [...V.pri,...V.unk,...c.secs.flatMap(s=>V.secs[s])].filter(out).forEach(a=>V.ex.push(a));
+  V.pri=V.pri.filter(a=>!out(a));V.unk=V.unk.filter(a=>!out(a));c.secs.forEach(s=>V.secs[s]=V.secs[s].filter(a=>!out(a)));
+  V.ex.filter(a=>a.manual==='in').forEach(a=>{((a.pri&&usePri)?V.pri:(V.secs[a.section]||V.unk)).push(a)});
+  V.ex=V.ex.filter(a=>a.manual!=='in');
+  gsort(V.pri,false);c.secs.forEach(s=>gsort(V.secs[s],full));
+  V.ex.sort(byIdx);
+  return V}
+function item(a,inPri,out){
+  const tn=(inPri&&a.tone)?'<span class="tn">'+({'긍정':'🟢 긍정','중립':'⚪ 중립','부정':'🔴 부정'}[a.tone])+'</span> ':'';
+  const m=[a.media,a.page].filter(Boolean).join(', ');
+  const lab=out?' <span>['+esc(a.dup?'관련 보도와 중복':(a.section||'기관 관련'))+']</span>':'';
+  return '<div class="it"><div class="ti"><input type="checkbox" class="ck" data-i="'+a.i+'"'+(SEL.has(a.i)?' checked':'')+' onchange="tick(this)">'+tn+'■ '+esc(a.title)+(m?' <span>('+esc(m)+')</span>':'')+lab+'<button class="dx" title="삭제" onclick="delArt('+a.i+')">×</button></div>'+(inPri&&a.tone==='부정'&&a.point?'<div class="su" style="color:#b3261e">▶ '+esc(a.point)+'</div>':'')+'</div>'}
+function render(){
+  if(!RC)return;const V=view(),c=RC;LASTV=V;
+  const L=(arr,p)=>arr.map(a=>item(a,p,false)).join('');
+  let h='<div class="page"><h2 class="rt">'+esc((c.org||'언론')+' 언론 보도 취합')+'</h2><div class="sh"><b>1</b><span>'+esc((c.org||'기관')+' 관련 보도')+'</span></div><div class="box">'+(COLLOK?collHtml(V.cm):(V.pri.length?L(V.pri,true):'<div class="empty">기관명이 언급된 기사가 없습니다.</div>'))+'</div><div class="sh"><b>2</b><span>주요 이슈</span></div>';
+  const ch=(k,arr,nm)=>'<div class="cat"><input type="checkbox" class="ck cs" data-k="'+k+'"'+(arr.length?'':' disabled')+' onchange="tickSec(this)" title="이 구분의 기사 전체 선택/해제"><span class="pm">☑ </span>'+esc(nm)+'</div>';
+  c.secs.forEach((s,si)=>{h+=ch('s'+si,V.secs[s],s)+(V.secs[s].length?L(V.secs[s],false):'<div class="empty">해당 기사 없음</div>')});
+  if(V.unk.length)h+=ch('u',V.unk,'분류 미정')+L(V.unk,false);
+  h+='</div><div class="page"><h2 class="rt" style="font-size:18px">제외한 기사</h2>'+(V.ex.length?V.ex.map(a=>item(a,false,true)).join(''):'<div class="empty">제외한 기사가 없습니다.</div>')+'</div>';
+  $('rep').innerHTML=h;
+  [...SEL].forEach(i=>{if(!ARTS[i]||ARTS[i].del)SEL.delete(i)});
+  $('bsec').innerHTML='<option value="">구분 변경…</option><option value="__pri">'+esc((c.org||'기관')+' 관련 보도')+'</option>'+c.secs.map(s=>'<option>'+esc(s)+'</option>').join('');
+  bar();syncCats();
+}
+/* 선택·이동·삭제 */
+function exIds(){return new Set(LASTV?LASTV.ex.map(a=>a.i):[])}
+function bar(){const n=SEL.size,ex=exIds();let a1=0,a2=0;SEL.forEach(i=>ex.has(i)?a2++:a1++);
+  $('abar').style.display=n?'flex':'none';$('sn').textContent=n;$('bo').style.display=a1?'':'none';$('bi2').style.display=a2?'':'none'}
+function catArr(k){return k==='u'?LASTV.unk:(LASTV.secs[RC.secs[+k.slice(1)]]||[])}
+function syncCats(){if(!LASTV)return;document.querySelectorAll('#rep .cs').forEach(e=>{const arr=catArr(e.dataset.k),n=arr.filter(a=>SEL.has(a.i)).length;e.checked=!!arr.length&&n===arr.length;e.indeterminate=n>0&&n<arr.length})}
+function tickSec(el){catArr(el.dataset.k).forEach(a=>el.checked?SEL.add(a.i):SEL.delete(a.i));render()}
+function tick(el){const i=+el.dataset.i;el.checked?SEL.add(i):SEL.delete(i);bar();syncCats()}
+function clearSel(){SEL.clear();render()}
+function commit(){saveHist();render()}
+function chg(){render();saveHist()}
+function outSel(){const ex=exIds();SEL.forEach(i=>{if(!ex.has(i))ARTS[i].manual='out'});SEL.clear();commit()}
+function inSel(){const ex=exIds();SEL.forEach(i=>{if(ex.has(i))ARTS[i].manual='in'});SEL.clear();commit()}
+function chSec(v){if(!v)return;const ex=exIds();SEL.forEach(i=>{const a=ARTS[i],was=!ex.has(i);
+  if(v==='__pri'){a.pri=true;if(a.role==='없음'||a.role==='관련')a.role='언급';if(!a.tone)a.tone='중립'}else{a.section=v;a.pri=false}
+  a.fail=false;a.manual=was?'in':'out'});SEL.clear();commit()}
+let tt=null;
+function delArt(i){ARTS[i].del=true;SEL.delete(i);LASTDEL=i;commit();const t=$('toast');t.innerHTML='기사를 삭제했습니다<button onclick="undoDel()">되돌리기</button>';t.style.display='block';clearTimeout(tt);tt=setTimeout(()=>t.style.display='none',6000)}
+function undoDel(){if(LASTDEL>=0&&ARTS[LASTDEL]){ARTS[LASTDEL].del=false;LASTDEL=-1;$('toast').style.display='none';commit()}}
+/* 날짜별 저장 */
+const HK='aiclassF_h';
+function todayStr(){const d=new Date(),p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}
+function saveHist(){
+  if(!RC||RUN)return;const d=$('rdate').value||todayStr();
+  H[d]={prof:ST.cur||'',org:RC.org,secs:RC.secs,mode:document.querySelector('input[name=mode]:checked').value,K:Math.max(1,parseInt($('kn').value,10)||3),arts:ARTS,at:Date.now()};
+  Object.keys(H).sort().slice(0,-60).forEach(k=>delete H[k]);
+  try{localStorage.setItem(HK,JSON.stringify(H))}catch(e){msg('저장 공간이 부족해 이번 변경은 저장되지 않았습니다. 오래된 저장본을 삭제해주세요.','err')}
+  hlist();
+}
+function hlist(){
+  const ks=Object.keys(H).sort().reverse();$('hsum').textContent='저장된 보고서 · '+ks.length+'개';
+  $('hlist').innerHTML=ks.length?ks.map(k=>{const r=H[k],n=r.arts.filter(a=>a&&!a.del).length;return '<div class="hr"><span>'+k+' · '+esc(r.prof||r.org)+' · '+n+'건</span><span><button class="g sm" onclick="openHist(\''+k+'\')">열기</button> <button class="g sm" onclick="delHist(\''+k+'\')">삭제</button></span></div>'}).join(''):'<div class="hint">아직 저장된 보고서가 없습니다. 분류를 마치면 자동으로 날짜별로 저장됩니다.</div>';
+}
+function openHist(d){
+  const r=H[d];if(!r)return;RC={org:r.org,secs:r.secs};ARTS=r.arts;SEL.clear();
+  document.querySelector('input[name=mode][value='+r.mode+']').checked=true;$('kn').value=r.K;$('rdate').value=d;
+  $('out').style.display='block';render();msg(d+' 저장본을 불러왔습니다. 수정·엑셀 저장이 가능하고, 변경하면 자동으로 다시 저장됩니다.','ok');
+}
+function delHist(d){delete H[d];try{localStorage.setItem(HK,JSON.stringify(H))}catch(e){}hlist()}
+/* 엑셀 */
+async function xl(){
+  if(!RC)return;if(typeof XLSX==='undefined'){msg('엑셀 도구를 불러오지 못했습니다. 인터넷 연결을 확인하세요.','err');return}
+  const V=view(),c=RC,r1=[['구분','제목','매체','지면','논조','URL','비고']];
+  const add=(sec,arr,p)=>{if(!arr.length)r1.push([sec,'(해당 기사 없음)','','','','','']);arr.forEach(a=>r1.push([sec,a.title,a.media,a.page,(p&&a.tone)||'',a.url||'',(p&&a.tone==='부정'&&a.point)||'']))};
+  if(COLLOK){const sp=collSplit(V.cm),ad=(n,a)=>{if(!a.length)r1.push([n,'(해당 기사 없음)','','','','','']);a.forEach(x=>r1.push([n,x.title,x.media,x.page||'','',x.url||x.link||'','']))};ad((c.org||'기관')+' 관련 보도 · 지면',sp.p);ad((c.org||'기관')+' 관련 보도 · 온라인',sp.o)}else add((c.org||'기관')+' 관련 보도',V.pri,true);c.secs.forEach(s=>add('주요 이슈 · '+s,V.secs[s],false));if(V.unk.length)add('분류 미정',V.unk,false);
+  const r2=[['구분','제목','매체','지면']];V.ex.forEach(a=>r2.push([a.section||'기관 관련',a.title,a.media,a.page]));if(r2.length===1)r2.push(['','(제외한 기사 없음)','','']);
+  const wb=XLSX.utils.book_new(),w1=XLSX.utils.aoa_to_sheet(r1),w2=XLSX.utils.aoa_to_sheet(r2);
+  for(let i=1;i<r1.length;i++){const u=r1[i][5],cl=w1['F'+(i+1)];if(u&&cl)cl.l={Target:u,Tooltip:u}}
+  w1['!cols']=[{wch:26},{wch:60},{wch:12},{wch:9},{wch:8},{wch:45},{wch:40}];w2['!cols']=[{wch:18},{wch:60},{wch:12},{wch:9}];
+  XLSX.utils.book_append_sheet(wb,w1,'1페이지(보고서)');XLSX.utils.book_append_sheet(wb,w2,'2페이지(제외)');
+  const data=new Blob([XLSX.write(wb,{type:'array',bookType:'xlsx'})],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),name='언론보도_'+($('rdate').value||todayStr())+'.xlsx';
+  const a=document.createElement('a');a.href=URL.createObjectURL(data);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+ST.profiles=ST.profiles||{};profOpts();
+if(ST.cur&&ST.profiles[ST.cur]){applyCfg(ST.profiles[ST.cur]);$('pname').value=ST.cur}else{applyCfg(ST.cfg||SEED);$('pd').open=!Object.keys(ST.profiles).length}
+$('rdate').value=todayStr();keyNote();loadModels();hlist();if(location.protocol!=='file:')loadColl();else $('cst').textContent='수집된 관련 보도: 수집 파일(.json)을 위 업로드 칸에 올려주세요.';if(!aiKey())$('kd').open=true;
+const hk=Object.keys(H).sort();if(hk.length)openHist(hk[hk.length-1]);
+</script></body></html>
